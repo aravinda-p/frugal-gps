@@ -3,6 +3,7 @@
 KCOV_INSTRUMENT := n
 
 obj-y += update.o sync.o
+obj-y += tree_trace.o
 obj-$(CONFIG_TREE_SRCU) += srcutree.o
 obj-$(CONFIG_TINY_SRCU) += srcutiny.o
 obj-$(CONFIG_RCU_TORTURE_TEST) += rcutorture.o
