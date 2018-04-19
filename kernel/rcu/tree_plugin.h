@@ -1884,7 +1884,13 @@ static void __call_rcu_nocb_enqueue(struct rcu_data *rdp,
 		return;
 	}
 	len = atomic_long_read(&rdp->nocb_q_count);
-	if (old_rhpp == &rdp->nocb_head) {
+
+	if (!(rhp->func == wakeme_after_rcu)) {
+		if (len < 500)
+			return;
+	}
+
+	if (old_rhpp == &rdp->nocb_head || len > 500) {
 		if (!irqs_disabled_flags(flags)) {
 			/* ... if queue was empty ... */
 			wake_nocb_leader(rdp, false);
@@ -1912,6 +1918,18 @@ static void __call_rcu_nocb_enqueue(struct rcu_data *rdp,
 					    TPS("WakeOvfIsDeferred"));
 		}
 		rdp->qlen_last_fqs_check = LONG_MAX / 2;
+	} else if (rhp->func == wakeme_after_rcu) {
+        if (!irqs_disabled_flags(flags)) {
+            wake_nocb_leader(rdp, false);
+            trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu,
+                        TPS("SyncWake"));
+        } else {
+            WRITE_ONCE(rdp->nocb_defer_wakeup, RCU_NOCB_WAKE);
+            /* Store ->nocb_defer_wakeup before ->rcu_urgent_qs. */
+            smp_store_release(this_cpu_ptr(&rcu_dynticks.rcu_urgent_qs), true);
+            trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu,
+                        TPS("SyncWakeDeferred"));
+        }
 	} else {
 		trace_rcu_nocb_wake(rdp->rsp->name, rdp->cpu, TPS("WakeNot"));
 	}
