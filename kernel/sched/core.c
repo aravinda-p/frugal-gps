@@ -3878,6 +3878,17 @@ int idle_cpu(int cpu)
 	return 1;
 }
 
+bool is_idle_cpu(int cpu)
+{
+	struct rq *rq = cpu_rq(cpu);
+
+	if (rq->curr == rq->idle)
+		return 1;
+	else
+		return 0;
+}
+EXPORT_SYMBOL(is_idle_cpu);
+
 /**
  * idle_task - return the idle task for a given CPU.
  * @cpu: the processor in question.
