@@ -1886,7 +1886,7 @@ static void __call_rcu_nocb_enqueue(struct rcu_data *rdp,
 	len = atomic_long_read(&rdp->nocb_q_count);
 
 	if (!(rhp->func == wakeme_after_rcu)) {
-		if (len < 500)
+		if (rcu_gp_is_normal() && len < 500)
 			return;
 	}
 

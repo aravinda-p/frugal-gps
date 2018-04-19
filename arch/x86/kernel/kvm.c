@@ -124,7 +124,6 @@ void kvm_async_pf_task_wait(u32 token)
 	struct kvm_task_sleep_node n, *e;
 	DECLARE_SWAITQUEUE(wait);
 
-	rcu_irq_enter();
 
 	raw_spin_lock(&b->lock);
 	e = _find_apf_task(b, token);
@@ -134,7 +133,6 @@ void kvm_async_pf_task_wait(u32 token)
 		kfree(e);
 		raw_spin_unlock(&b->lock);
 
-		rcu_irq_exit();
 		return;
 	}
 
@@ -151,7 +149,6 @@ void kvm_async_pf_task_wait(u32 token)
 		if (hlist_unhashed(&n.link))
 			break;
 
-		rcu_irq_exit();
 
 		if (!n.halted) {
 			local_irq_enable();
@@ -165,12 +162,10 @@ void kvm_async_pf_task_wait(u32 token)
 			local_irq_disable();
 		}
 
-		rcu_irq_enter();
 	}
 	if (!n.halted)
 		finish_swait(&n.wq, &wait);
 
-	rcu_irq_exit();
 	return;
 }
 EXPORT_SYMBOL_GPL(kvm_async_pf_task_wait);
@@ -272,9 +267,7 @@ do_async_page_fault(struct pt_regs *regs, unsigned long error_code)
 		exception_exit(prev_state);
 		break;
 	case KVM_PV_REASON_PAGE_READY:
-		rcu_irq_enter();
 		kvm_async_pf_task_wake((u32)read_cr2());
-		rcu_irq_exit();
 		break;
 	}
 }

@@ -114,7 +114,6 @@ void ist_enter(struct pt_regs *regs)
 		 * NMI processing.  We don't want in_nmi() to return true,
 		 * but we need to notify RCU.
 		 */
-		rcu_nmi_enter();
 	}
 
 	preempt_disable();
@@ -127,8 +126,6 @@ void ist_exit(struct pt_regs *regs)
 {
 	preempt_enable_no_resched();
 
-	if (!user_mode(regs))
-		rcu_nmi_exit();
 }
 
 /**
