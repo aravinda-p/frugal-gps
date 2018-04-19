@@ -3410,11 +3410,6 @@ static int __rcu_pending(struct rcu_state *rsp, struct rcu_data *rdp)
  */
 static int rcu_pending(void)
 {
-	struct rcu_state *rsp;
-
-	for_each_rcu_flavor(rsp)
-		if (__rcu_pending(rsp, this_cpu_ptr(rsp->rda)))
-			return 1;
 	return 0;
 }
 
