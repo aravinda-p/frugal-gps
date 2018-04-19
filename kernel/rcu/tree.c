@@ -764,6 +764,7 @@ cpu_needs_another_gp(struct rcu_state *rsp, struct rcu_data *rdp)
 	return false; /* No grace period needed. */
 }
 
+#if 0
 /*
  * rcu_eqs_enter_common - current CPU is entering an extended quiescent state
  *
@@ -828,6 +829,7 @@ static void rcu_eqs_enter(bool user)
 	else
 		rdtp->dynticks_nesting -= DYNTICK_TASK_NEST_VALUE;
 }
+#endif
 
 /**
  * rcu_idle_enter - inform RCU that current CPU is entering idle
@@ -843,11 +845,6 @@ static void rcu_eqs_enter(bool user)
  */
 void rcu_idle_enter(void)
 {
-	unsigned long flags;
-
-	local_irq_save(flags);
-	rcu_eqs_enter(false);
-	local_irq_restore(flags);
 }
 EXPORT_SYMBOL_GPL(rcu_idle_enter);
 
@@ -862,7 +859,6 @@ EXPORT_SYMBOL_GPL(rcu_idle_enter);
  */
 void rcu_user_enter(void)
 {
-	rcu_eqs_enter(1);
 }
 #endif /* CONFIG_NO_HZ_FULL */
 
@@ -884,18 +880,6 @@ void rcu_user_enter(void)
  */
 void rcu_irq_exit(void)
 {
-	struct rcu_dynticks *rdtp;
-
-	RCU_LOCKDEP_WARN(!irqs_disabled(), "rcu_irq_exit() invoked with irqs enabled!!!");
-	rdtp = this_cpu_ptr(&rcu_dynticks);
-	WARN_ON_ONCE(IS_ENABLED(CONFIG_RCU_EQS_DEBUG) &&
-		     rdtp->dynticks_nesting < 1);
-	if (rdtp->dynticks_nesting <= 1) {
-		rcu_eqs_enter_common(true);
-	} else {
-		trace_rcu_dyntick(TPS("--="), rdtp->dynticks_nesting, rdtp->dynticks_nesting - 1);
-		rdtp->dynticks_nesting--;
-	}
 }
 
 /*
@@ -903,13 +887,9 @@ void rcu_irq_exit(void)
  */
 void rcu_irq_exit_irqson(void)
 {
-	unsigned long flags;
-
-	local_irq_save(flags);
-	rcu_irq_exit();
-	local_irq_restore(flags);
 }
 
+#if 0
 /*
  * rcu_eqs_exit_common - current CPU moving away from extended quiescent state
  *
@@ -959,6 +939,7 @@ static void rcu_eqs_exit(bool user)
 		rcu_eqs_exit_common(oldval, user);
 	}
 }
+#endif
 
 /**
  * rcu_idle_exit - inform RCU that current CPU is leaving idle
@@ -973,11 +954,6 @@ static void rcu_eqs_exit(bool user)
  */
 void rcu_idle_exit(void)
 {
-	unsigned long flags;
-
-	local_irq_save(flags);
-	rcu_eqs_exit(false);
-	local_irq_restore(flags);
 }
 EXPORT_SYMBOL_GPL(rcu_idle_exit);
 
@@ -990,7 +966,6 @@ EXPORT_SYMBOL_GPL(rcu_idle_exit);
  */
 void rcu_user_exit(void)
 {
-	rcu_eqs_exit(1);
 }
 #endif /* CONFIG_NO_HZ_FULL */
 
@@ -1015,19 +990,6 @@ void rcu_user_exit(void)
  */
 void rcu_irq_enter(void)
 {
-	struct rcu_dynticks *rdtp;
-	long long oldval;
-
-	RCU_LOCKDEP_WARN(!irqs_disabled(), "rcu_irq_enter() invoked with irqs enabled!!!");
-	rdtp = this_cpu_ptr(&rcu_dynticks);
-	oldval = rdtp->dynticks_nesting;
-	rdtp->dynticks_nesting++;
-	WARN_ON_ONCE(IS_ENABLED(CONFIG_RCU_EQS_DEBUG) &&
-		     rdtp->dynticks_nesting == 0);
-	if (oldval)
-		trace_rcu_dyntick(TPS("++="), oldval, rdtp->dynticks_nesting);
-	else
-		rcu_eqs_exit_common(oldval, true);
 }
 
 /*
@@ -1035,11 +997,6 @@ void rcu_irq_enter(void)
  */
 void rcu_irq_enter_irqson(void)
 {
-	unsigned long flags;
-
-	local_irq_save(flags);
-	rcu_irq_enter();
-	local_irq_restore(flags);
 }
 
 /**
@@ -1053,26 +1010,6 @@ void rcu_irq_enter_irqson(void)
  */
 void rcu_nmi_enter(void)
 {
-	struct rcu_dynticks *rdtp = this_cpu_ptr(&rcu_dynticks);
-	int incby = 2;
-
-	/* Complain about underflow. */
-	WARN_ON_ONCE(rdtp->dynticks_nmi_nesting < 0);
-
-	/*
-	 * If idle from RCU viewpoint, atomically increment ->dynticks
-	 * to mark non-idle and increment ->dynticks_nmi_nesting by one.
-	 * Otherwise, increment ->dynticks_nmi_nesting by two.  This means
-	 * if ->dynticks_nmi_nesting is equal to one, we are guaranteed
-	 * to be in the outermost NMI handler that interrupted an RCU-idle
-	 * period (observation due to Andy Lutomirski).
-	 */
-	if (rcu_dynticks_curr_cpu_in_eqs()) {
-		rcu_dynticks_eqs_exit();
-		incby = 1;
-	}
-	rdtp->dynticks_nmi_nesting += incby;
-	barrier();
 }
 
 /**
@@ -1085,28 +1022,6 @@ void rcu_nmi_enter(void)
  */
 void rcu_nmi_exit(void)
 {
-	struct rcu_dynticks *rdtp = this_cpu_ptr(&rcu_dynticks);
-
-	/*
-	 * Check for ->dynticks_nmi_nesting underflow and bad ->dynticks.
-	 * (We are exiting an NMI handler, so RCU better be paying attention
-	 * to us!)
-	 */
-	WARN_ON_ONCE(rdtp->dynticks_nmi_nesting <= 0);
-	WARN_ON_ONCE(rcu_dynticks_curr_cpu_in_eqs());
-
-	/*
-	 * If the nesting level is not 1, the CPU wasn't RCU-idle, so
-	 * leave it in non-RCU-idle state.
-	 */
-	if (rdtp->dynticks_nmi_nesting != 1) {
-		rdtp->dynticks_nmi_nesting -= 2;
-		return;
-	}
-
-	/* This NMI interrupted an RCU-idle CPU, restore RCU-idleness. */
-	rdtp->dynticks_nmi_nesting = 0;
-	rcu_dynticks_eqs_enter();
 }
 
 /**
