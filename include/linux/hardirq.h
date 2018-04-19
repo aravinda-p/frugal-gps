@@ -66,14 +66,12 @@ extern void irq_exit(void);
 		ftrace_nmi_enter();				\
 		BUG_ON(in_nmi());				\
 		preempt_count_add(NMI_OFFSET + HARDIRQ_OFFSET);	\
-		rcu_nmi_enter();				\
 		trace_hardirq_enter();				\
 	} while (0)
 
 #define nmi_exit()						\
 	do {							\
 		trace_hardirq_exit();				\
-		rcu_nmi_exit();					\
 		BUG_ON(!in_nmi());				\
 		preempt_count_sub(NMI_OFFSET + HARDIRQ_OFFSET);	\
 		ftrace_nmi_exit();				\

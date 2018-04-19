@@ -835,10 +835,6 @@ static void rcu_eqs_enter(bool user)
  * the possibility of usermode upcalls having messed up our count
  * of interrupt nesting level during the prior busy period.
  */
-void rcu_idle_enter(void)
-{
-}
-EXPORT_SYMBOL_GPL(rcu_idle_enter);
 
 #ifdef CONFIG_NO_HZ_FULL
 /**
@@ -849,9 +845,6 @@ EXPORT_SYMBOL_GPL(rcu_idle_enter);
  * CPU doesn't need to maintain the tick for RCU maintenance purposes
  * when the CPU runs in userspace.
  */
-void rcu_user_enter(void)
-{
-}
 #endif /* CONFIG_NO_HZ_FULL */
 
 /**
@@ -870,14 +863,11 @@ void rcu_user_enter(void)
  *
  * You have been warned.
  */
-void rcu_irq_exit(void)
-{
-}
 
 /*
  * Wrapper for rcu_irq_exit() where interrupts are enabled.
  */
-void rcu_irq_exit_irqson(void)
+void inline rcu_irq_exit_irqson(void)
 {
 }
 
@@ -944,10 +934,6 @@ static void rcu_eqs_exit(bool user)
  * of interrupt nesting level during the busy period that is just
  * now starting.
  */
-void rcu_idle_exit(void)
-{
-}
-EXPORT_SYMBOL_GPL(rcu_idle_exit);
 
 #ifdef CONFIG_NO_HZ_FULL
 /**
@@ -956,9 +942,6 @@ EXPORT_SYMBOL_GPL(rcu_idle_exit);
  * Exit RCU idle mode while entering the kernel because it can
  * run a RCU read side critical section anytime.
  */
-void rcu_user_exit(void)
-{
-}
 #endif /* CONFIG_NO_HZ_FULL */
 
 /**
@@ -980,14 +963,10 @@ void rcu_user_exit(void)
  *
  * You have been warned.
  */
-void rcu_irq_enter(void)
-{
-}
-
 /*
  * Wrapper for rcu_irq_enter() where interrupts are enabled.
  */
-void rcu_irq_enter_irqson(void)
+void inline rcu_irq_enter_irqson(void)
 {
 }
 
@@ -1000,9 +979,6 @@ void rcu_irq_enter_irqson(void)
  * long as the nesting level does not overflow an int.  (You will probably
  * run out of stack space first.)
  */
-void rcu_nmi_enter(void)
-{
-}
 
 /**
  * rcu_nmi_exit - inform RCU of exit from NMI context
@@ -1012,9 +988,6 @@ void rcu_nmi_enter(void)
  * to let the RCU grace-period handling know that the CPU is back to
  * being RCU-idle.
  */
-void rcu_nmi_exit(void)
-{
-}
 
 /**
  * rcu_is_watching - see if RCU thinks that the current CPU is idle

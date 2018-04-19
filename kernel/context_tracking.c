@@ -79,7 +79,6 @@ void __context_tracking_enter(enum ctx_state state)
 				trace_user_enter(0);
 				vtime_user_enter(current);
 			}
-			rcu_user_enter();
 		}
 		/*
 		 * Even if context tracking is disabled on this CPU, because it's outside
@@ -152,7 +151,6 @@ void __context_tracking_exit(enum ctx_state state)
 			 * We are going to run code that may use RCU. Inform
 			 * RCU core about that (ie: we may need the tick again).
 			 */
-			rcu_user_exit();
 			if (state == CONTEXT_USER) {
 				vtime_user_exit(current);
 				trace_user_exit(0);
